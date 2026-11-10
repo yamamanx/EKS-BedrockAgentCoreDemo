@@ -53,10 +53,35 @@
     const banner = document.getElementById("banner");
     let harnessConfigured = true;
 
-    // 匿名のユーザー ID (メモリ用) と会話 ID をブラウザに保存する
-    const newId = () => crypto.randomUUID().replaceAll("-", "");
-    const actorId = localStorage.getItem("actorId") || (localStorage.setItem("actorId", newId()), localStorage.getItem("actorId"));
-    const sessionId = sessionStorage.getItem("sessionId") || (sessionStorage.setItem("sessionId", newId()), sessionStorage.getItem("sessionId"));
+    // 想定外のスクリプトエラーも画面に出す (無言で動かなくなるのを防ぐ)
+    window.addEventListener("error", (e) => {
+      banner.textContent = "[エラー] 画面でエラーが発生しました: " + e.message;
+      banner.classList.add("show");
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      banner.textContent = "[エラー] 画面でエラーが発生しました: " + (e.reason && e.reason.message || e.reason);
+      banner.classList.add("show");
+    });
+
+    // 匿名のユーザー ID (メモリ用) と会話 ID。
+    // ALB は HTTP のため crypto.randomUUID() (HTTPS/localhost 限定) は使わず、getRandomValues を使う。
+    const newId = () => {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    };
+    // ストレージが使えない環境 (プライベートブラウズなど) でも動くよう、失敗したらメモリ上の値を使う
+    const stored = (storage, key) => {
+      try {
+        let v = storage.getItem(key);
+        if (!v) { v = newId(); storage.setItem(key, v); }
+        return v;
+      } catch (_) {
+        return newId();
+      }
+    };
+    const actorId = stored(localStorage, "actorId");
+    const sessionId = stored(sessionStorage, "sessionId");
 
     function addMessage(role, text) {
       const el = document.createElement("div");
