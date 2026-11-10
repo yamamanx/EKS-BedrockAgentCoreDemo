@@ -1,0 +1,36 @@
+# デモ中に書き換えるのは harness.arn だけ。
+# image.* / serviceAccount.roleArn / aws.region は CodePipeline の EKS デプロイアクションが
+# helm/pipeline-values.yaml (環境変数で置換) を使って上書きする。
+
+harness:
+  # ハーネス作成後に表示される ARN を貼り付ける
+  # 例: arn:aws:bedrock-agentcore:us-east-1:111122223333:harness/MyHarness-XXXXXXXXXX
+  arn: ""
+  # エンドポイント名 (省略すると DEFAULT)
+  qualifier: ""
+
+image:
+  repository: ""   # パイプラインが ECR リポジトリ URI を設定
+  tag: ""          # パイプラインがビルドしたタグを設定
+  pullPolicy: IfNotPresent
+
+aws:
+  region: us-east-1
+
+serviceAccount:
+  name: chat-app   # IRSA の信頼ポリシー (CDK) と一致させること
+  roleArn: ""      # パイプラインが IRSA ロール ARN を設定
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  # ALB への接続を許可する CIDR。公開デモ後は自分の IP などに絞ること。
+  inboundCidrs: "0.0.0.0/0"

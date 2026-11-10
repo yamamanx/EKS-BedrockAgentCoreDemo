@@ -1,0 +1,22 @@
+version: 0.2
+
+# コンテナイメージをビルドして ECR にプッシュする。
+# 環境変数 ECR_REPOSITORY_URI は CDK (PipelineStack) から渡される。
+# 新しいタグは exported-variables 経由で Deploy ステージに引き渡す。
+
+env:
+  exported-variables:
+    - IMAGE_TAG
+
+phases:
+  pre_build:
+    commands:
+      - export IMAGE_TAG="$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}" | cut -c1-12)"
+      - echo "Image ${ECR_REPOSITORY_URI}:${IMAGE_TAG}"
+      - aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REPOSITORY_URI%%/*}"
+  build:
+    commands:
+      - docker build -t "${ECR_REPOSITORY_URI}:${IMAGE_TAG}" ./app
+  post_build:
+    commands:
+      - docker push "${ECR_REPOSITORY_URI}:${IMAGE_TAG}"

@@ -1,0 +1,16 @@
+# CodePipeline の「Amazon EKS」デプロイアクション (Helm) が読み込む values の上書きファイル。
+# $... はアクションの環境変数 (EnvironmentVariables) で置換される。
+# 値は CDK (infra/pipeline_stack.py) で定義している。
+#   IMAGE_REPOSITORY : ECR リポジトリ URI
+#   IMAGE_TAG        : Build ステージが push したイメージタグ (#{BuildVars.IMAGE_TAG})
+#   APP_ROLE_ARN     : Pod 用 IRSA ロールの ARN
+#   AWS_REGION       : ハーネスのリージョン
+image:
+  repository: $IMAGE_REPOSITORY
+  tag: $IMAGE_TAG
+
+serviceAccount:
+  roleArn: $APP_ROLE_ARN
+
+aws:
+  region: $AWS_REGION

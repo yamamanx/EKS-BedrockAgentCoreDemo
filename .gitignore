@@ -1,0 +1,39 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / CDK
+node_modules/
+cdk.out/
+cdk.context.json
+*.tsbuildinfo
+
+# Secrets / local config
+.env
+.env.*
+*.pem
+*.key
+.aws/
+.kiro/settings/
+
+# Helm
+helm/**/charts/
+*.tgz
+
+# Local notes (not published)
+spec.md
+
+# Temporary files
+tmp/
+*.log

@@ -1,0 +1,8 @@
+{
+  "name": "eks-bedrock-agentcore-demo",
+  "private": true,
+  "description": "CDK CLI pin for the EKS + Bedrock AgentCore harness demo",
+  "devDependencies": {
+    "aws-cdk": "2.1148.0"
+  }
+}
