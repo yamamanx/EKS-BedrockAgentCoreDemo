@@ -14,7 +14,9 @@ from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_logs as logs
 from constructs import Construct
 
-LAMBDA_DIR = Path(__file__).resolve().parent.parent / "lambda" / "matsusaka_search"
+LAMBDA_ROOT = Path(__file__).resolve().parent.parent / "lambda"
+LAMBDA_DIR = LAMBDA_ROOT / "matsusaka_search"
+SITE_LAMBDA_DIR = LAMBDA_ROOT / "yamamanx_site"
 AGENTCORE_PRINCIPAL = iam.ServicePrincipal("bedrock-agentcore.amazonaws.com")
 
 
@@ -77,17 +79,40 @@ class AgentCoreStack(Stack):
         )
         search_function.grant_invoke(gateway_role)
 
+        # ---------------------------------------------------------------
+        # ターゲット Lambda (山下光洋さんの趣味嗜好を調べるサイト検索)
+        # 取得する URL は Lambda 側で 2 ページに固定している (SSRF 対策)。
+        # ---------------------------------------------------------------
+        site_function = lambda_.Function(
+            self,
+            "YamamanxSiteFunction",
+            runtime=lambda_.Runtime.PYTHON_3_13,
+            architecture=lambda_.Architecture.ARM_64,
+            handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset(str(SITE_LAMBDA_DIR)),
+            timeout=Duration.seconds(30),
+            memory_size=256,
+            description="Fetches two fixed yamamanx.com pages (profile, Copilot post) for the AgentCore Gateway",
+            log_group=logs.LogGroup(
+                self,
+                "SiteFunctionLogGroup",
+                retention=logs.RetentionDays.ONE_WEEK,
+                removal_policy=cdk.RemovalPolicy.DESTROY,
+            ),
+        )
+        site_function.grant_invoke(gateway_role)
+
         gateway = agentcore.CfnGateway(
             self,
             "Gateway",
             name="matsusaka-gateway",
-            description="松阪市の観光施設・文化施設を検索するツールを提供する Gateway",
+            description="松阪市の観光施設・文化施設の検索と、発表者のサイト検索ツールを提供する Gateway",
             protocol_type="MCP",
             authorizer_type="AWS_IAM",
             role_arn=gateway_role.role_arn,
         )
 
-        agentcore.CfnGatewayTarget(
+        matsusaka_target = agentcore.CfnGatewayTarget(
             self,
             "GatewayTarget",
             name="matsusaka-api",
@@ -124,6 +149,55 @@ class AgentCoreStack(Stack):
                 )
             ),
         )
+
+        site_target = agentcore.CfnGatewayTarget(
+            self,
+            "SiteGatewayTarget",
+            name="yamamanx-site",
+            description="山下光洋さんのサイト (プロフィール / Copilot 振り返り記事) の検索",
+            gateway_identifier=gateway.attr_gateway_identifier,
+            credential_provider_configurations=[
+                agentcore.CfnGatewayTarget.CredentialProviderConfigurationProperty(
+                    credential_provider_type="GATEWAY_IAM_ROLE",
+                )
+            ],
+            target_configuration=agentcore.CfnGatewayTarget.TargetConfigurationProperty(
+                mcp=agentcore.CfnGatewayTarget.McpTargetConfigurationProperty(
+                    lambda_=agentcore.CfnGatewayTarget.McpLambdaTargetConfigurationProperty(
+                        lambda_arn=site_function.function_arn,
+                        tool_schema=agentcore.CfnGatewayTarget.ToolSchemaProperty(
+                            inline_payload=[
+                                agentcore.CfnGatewayTarget.ToolDefinitionProperty(
+                                    name="search_yamamanx_site",
+                                    description=(
+                                        "山下光洋さん (このデモの発表者) の人物像・性格・考え方・趣味嗜好・経歴・著書・"
+                                        "登壇予定などを、本人のサイト 2 ページ (プロフィール、Copilot による"
+                                        "Teams ポスト振り返り記事) から調べる。"
+                                        "キーワードに一致する行を前後の文脈つきで返す。"
+                                        "一致しない場合は keyword を省略するか、別の言い方で再検索する。"
+                                    ),
+                                    input_schema=agentcore.CfnGatewayTarget.SchemaDefinitionProperty(
+                                        type="object",
+                                        properties={
+                                            "keyword": _string(
+                                                "探したい語 (例: 負けず嫌い、音楽、AWS、登壇)。省略するとページ全体を返す"
+                                            ),
+                                            "source": _string(
+                                                "all (既定) / profile (プロフィール) / copilot_post (Copilot 振り返り記事)"
+                                            ),
+                                        },
+                                        required=[],
+                                    ),
+                                )
+                            ]
+                        ),
+                    )
+                )
+            ),
+        )
+
+        # 同じ Gateway への更新が競合しないよう、ターゲットは順番に作成する
+        site_target.add_resource_dependency(matsusaka_target)
 
         # ---------------------------------------------------------------
         # Memory (長期メモリ: 要約 / ユーザー嗜好 / セマンティック)

@@ -77,15 +77,30 @@ def _stream_harness(request: ChatRequest) -> Iterator[str]:
         yield "\n\n[エラー] ハーネスの呼び出しに失敗しました。時間をおいて再度お試しください。"
 
 
+NOT_CONFIGURED_MESSAGE = (
+    "ハーネス ARN が設定されていません。"
+    "helm/chat-app/values.yaml の harness.arn にハーネスの ARN を設定して、再デプロイしてください。"
+)
+
+
 @app.get("/healthz")
 def healthz() -> dict:
+    # HARNESS_ARN が未設定でも Pod は Ready にする (画面でエラーを表示するため)
     return {"status": "ok"}
+
+
+@app.get("/api/status")
+def status() -> dict:
+    """画面が起動時に呼び出す. ARN 自体は返さない."""
+    if not HARNESS_ARN:
+        return {"harness_configured": False, "message": NOT_CONFIGURED_MESSAGE}
+    return {"harness_configured": True, "message": ""}
 
 
 @app.post("/api/chat")
 def chat(request: ChatRequest) -> StreamingResponse:
     if not HARNESS_ARN:
-        raise HTTPException(status_code=503, detail="HARNESS_ARN が設定されていません")
+        raise HTTPException(status_code=503, detail=NOT_CONFIGURED_MESSAGE)
     if not ID_PATTERN.match(request.session_id) or not ID_PATTERN.match(request.actor_id):
         raise HTTPException(status_code=400, detail="session_id / actor_id の形式が不正です")
     return StreamingResponse(

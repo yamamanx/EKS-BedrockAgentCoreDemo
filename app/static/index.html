@@ -16,6 +16,8 @@
     .msg { max-width: min(46rem, 90%); padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; background: var(--card); border: 1px solid rgba(128,128,128,.3); }
     .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-color: transparent; }
     .msg.bot { align-self: flex-start; }
+    #banner { display: none; padding: 10px 16px; background: #b3261e; color: #fff; font-weight: 600; }
+    #banner.show { display: block; }
     footer { padding: 6px 16px; font-size: .75rem; color: var(--muted); background: var(--card); border-top: 1px solid rgba(128,128,128,.3); }
     footer a { color: inherit; }
     form { display: flex; gap: 8px; padding: 12px 16px; background: var(--card); border-top: 1px solid rgba(128,128,128,.3); }
@@ -30,6 +32,7 @@
     <h1>松阪観光ガイド</h1>
     <p>Amazon Bedrock AgentCore ハーネス on EKS (Fargate)</p>
   </header>
+  <div id="banner" role="alert"></div>
   <main id="log" role="log" aria-live="polite" aria-label="会話履歴"></main>
   <form id="form">
     <label for="input" hidden>メッセージ</label>
@@ -47,6 +50,8 @@
     const form = document.getElementById("form");
     const input = document.getElementById("input");
     const send = document.getElementById("send");
+    const banner = document.getElementById("banner");
+    let harnessConfigured = true;
 
     // 匿名のユーザー ID (メモリ用) と会話 ID をブラウザに保存する
     const newId = () => crypto.randomUUID().replaceAll("-", "");
@@ -62,6 +67,26 @@
       return el;
     }
 
+    function showConfigError(message) {
+      harnessConfigured = false;
+      banner.textContent = "[エラー] " + message;
+      banner.classList.add("show");
+      input.disabled = true;
+      send.disabled = true;
+    }
+
+    // 起動時にハーネス ARN が設定されているか確認し、未設定ならエラーを表示する
+    async function checkStatus() {
+      try {
+        const res = await fetch("/api/status", { cache: "no-store" });
+        const body = await res.json();
+        if (!body.harness_configured) showConfigError(body.message);
+      } catch (e) {
+        showConfigError("アプリの状態を確認できませんでした: " + e.message);
+      }
+    }
+    checkStatus();
+
     async function ask(message) {
       addMessage("user", message);
       const bot = addMessage("bot", "…");
@@ -72,7 +97,12 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message, session_id: sessionId, actor_id: actorId }),
         });
-        if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
+        if (!res.ok || !res.body) {
+          let detail = "HTTP " + res.status;
+          try { detail = (await res.json()).detail || detail; } catch (_) { /* JSON 以外はステータスのみ */ }
+          if (res.status === 503) showConfigError(detail);
+          throw new Error(detail);
+        }
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let text = "";
@@ -87,15 +117,17 @@
       } catch (e) {
         bot.textContent = "[エラー] " + e.message;
       } finally {
-        send.disabled = false;
-        input.focus();
+        if (harnessConfigured) {
+          send.disabled = false;
+          input.focus();
+        }
       }
     }
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const message = input.value.trim();
-      if (!message || send.disabled) return;
+      if (!message || send.disabled || !harnessConfigured) return;
       input.value = "";
       ask(message);
     });
