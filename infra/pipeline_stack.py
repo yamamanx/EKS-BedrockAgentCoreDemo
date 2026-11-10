@@ -175,7 +175,7 @@ class PipelineStack(Stack):
         connection = codestar.CfnConnection(
             self,
             "GitHubConnection",
-            connection_name="agentcore-demo-github",
+            connection_name="agentcore-demo-repo",
             provider_type="GitHub",
         )
 

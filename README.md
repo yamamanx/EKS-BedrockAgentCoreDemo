@@ -53,7 +53,7 @@ npx cdk deploy --all -c github_repo=<owner>/<repo>
 
 1. **GitHub 接続の承認** (1 回だけ必要)
    - コンソールの [Developer Tools > 設定 > 接続](https://console.aws.amazon.com/codesuite/settings/connections?region=us-east-1) を開きます。
-   - 状態が「保留中」の `agentcore-demo-github` を選び、「保留中の接続を更新」から GitHub を認可します。
+   - 状態が「保留中」の `agentcore-demo-repo` を選び、「保留中の接続を更新」から GitHub を認可します。
 2. **コードを GitHub にプッシュ** します。パイプラインが起動します。
    - この時点では `harness.arn` が空のため、Pod は起動しますが、チャットはエラーを返します。
 3. スタックの出力 (ハーネス作成時に使います) を控えておきます。
