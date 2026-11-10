@@ -15,6 +15,14 @@ GitHub ──push──▶ CodePipeline ──▶ CodeBuild (docker build / ECR 
                                                                                                └─ Lambda ─▶ 発表者のサイト (2 ページ)
 ```
 
+## 構成図
+
+![構成図](docs/architecture.png)
+
+編集用のファイルは [`docs/architecture.drawio`](docs/architecture.drawio) です。[draw.io](https://app.diagrams.net/) で開いてください。
+AgentCore のアイコン (`bedrock_agentcore`) は比較的新しいため、古い draw.io デスクトップ版では四角だけで表示されることがあります。
+その場合は draw.io を最新版に更新するか、Web 版で開いてください。
+
 ## リポジトリ構成
 
 | パス | 内容 |
@@ -29,6 +37,7 @@ GitHub ──push──▶ CodePipeline ──▶ CodeBuild (docker build / ECR 
 | `helm/chat-app/` | Helm チャート。`values.yaml` の `harness.id` だけデモ中に書き換えます |
 | `helm/pipeline-values.yaml` | パイプラインが環境変数で置換して渡す values の上書きファイル |
 | `buildspec/build.yml` | イメージのビルドと ECR への push |
+| `docs/` | 構成図 (`architecture.drawio` と書き出した `architecture.png`) |
 
 ## 事前準備 (デモ前に 1 回)
 
