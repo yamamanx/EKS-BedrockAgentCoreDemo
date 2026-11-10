@@ -1,11 +1,13 @@
-# デモ中に書き換えるのは harness.arn だけ。
-# image.* / serviceAccount.roleArn / aws.region は CodePipeline の EKS デプロイアクションが
+# デモ中に書き換えるのは harness.id だけ。
+# image.* / serviceAccount.roleArn / aws.region / aws.accountId は CodePipeline の EKS デプロイアクションが
 # helm/pipeline-values.yaml (環境変数で置換) を使って上書きする。
+# ハーネスの ARN は「リージョン + アカウント ID + harness.id」からチャートが組み立てる
+# (アカウント ID を公開リポジトリに残さないため)。
 
 harness:
-  # ハーネス作成後に表示される ARN を貼り付ける
-  # 例: arn:aws:bedrock-agentcore:us-east-1:111122223333:harness/MyHarness-XXXXXXXXXX
-  arn: ""
+  # ハーネスの ID。ARN の末尾 "harness/" の後ろの部分 (エンドポイントは含めない)
+  # 例: arn:aws:bedrock-agentcore:us-east-1:111122223333:harness/MyHarness-XXXXXXXXXX -> MyHarness-XXXXXXXXXX
+  id: "MatsusakaGuide-iqgKn77d2h"
   # エンドポイント名 (省略すると DEFAULT)
   qualifier: ""
 
@@ -16,6 +18,7 @@ image:
 
 aws:
   region: us-east-1
+  accountId: ""    # パイプラインが AWS アカウント ID を設定
 
 serviceAccount:
   name: chat-app   # IRSA の信頼ポリシー (CDK) と一致させること

@@ -261,6 +261,7 @@ class PipelineStack(Stack):
             "IMAGE_TAG": build_action.variable("IMAGE_TAG"),
             "APP_ROLE_ARN": app_role.role_arn,
             "AWS_REGION": self.region,
+            "AWS_ACCOUNT_ID": self.account,
         }
         cfn_pipeline = pipeline.node.default_child
         cfn_pipeline.add_property_override(

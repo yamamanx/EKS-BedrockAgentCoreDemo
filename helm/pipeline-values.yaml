@@ -5,12 +5,15 @@
 #   IMAGE_TAG        : Build ステージが push したイメージタグ (#{BuildVars.IMAGE_TAG})
 #   APP_ROLE_ARN     : Pod 用 IRSA ロールの ARN
 #   AWS_REGION       : ハーネスのリージョン
+#   AWS_ACCOUNT_ID   : デプロイ先のアカウント ID (ハーネス ARN の組み立てに使う)
+# 数字だけ、または 1e10 のような文字列が YAML で数値と解釈されないよう、タグと ID は引用符で囲む。
 image:
   repository: $IMAGE_REPOSITORY
-  tag: $IMAGE_TAG
+  tag: "$IMAGE_TAG"
 
 serviceAccount:
   roleArn: $APP_ROLE_ARN
 
 aws:
   region: $AWS_REGION
+  accountId: "$AWS_ACCOUNT_ID"

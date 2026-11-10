@@ -79,7 +79,7 @@ def _stream_harness(request: ChatRequest) -> Iterator[str]:
 
 NOT_CONFIGURED_MESSAGE = (
     "ハーネス ARN が設定されていません。"
-    "helm/chat-app/values.yaml の harness.arn にハーネスの ARN を設定して、再デプロイしてください。"
+    "helm/chat-app/values.yaml の harness.id にハーネスの ID を設定して、再デプロイしてください。"
 )
 
 

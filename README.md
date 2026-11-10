@@ -26,7 +26,7 @@ GitHub ──push──▶ CodePipeline ──▶ CodeBuild (docker build / ECR 
 | `lambda/matsusaka_search/` | Gateway ターゲット Lambda (松阪市 SPARQL API の検索) |
 | `lambda/yamamanx_site/` | Gateway ターゲット Lambda (発表者のサイト 2 ページの検索) |
 | `app/` | チャット Web アプリ (FastAPI + 静的 HTML) と Dockerfile |
-| `helm/chat-app/` | Helm チャート。`values.yaml` の `harness.arn` だけデモ中に書き換えます |
+| `helm/chat-app/` | Helm チャート。`values.yaml` の `harness.id` だけデモ中に書き換えます |
 | `helm/pipeline-values.yaml` | パイプラインが環境変数で置換して渡す values の上書きファイル |
 | `buildspec/build.yml` | イメージのビルドと ECR への push |
 
@@ -57,7 +57,7 @@ npx cdk deploy --all -c github_repo=<owner>/<repo>
    - コンソールの [Developer Tools > 設定 > 接続](https://console.aws.amazon.com/codesuite/settings/connections?region=us-east-1) を開きます。
    - 状態が「保留中」の `agentcore-demo-repo` を選び、「保留中の接続を更新」から GitHub を認可します。
 2. **コードを GitHub にプッシュ** します。パイプラインが起動します。
-   - この時点では `harness.arn` が空のため、Pod は起動しますが、チャットはエラーを返します。
+   - この時点では `harness.id` が空のため、Pod は起動しますが、チャットはエラーを返します。
 3. スタックの出力 (ハーネス作成時に使います) を控えておきます。
 
 ```bash
@@ -93,17 +93,17 @@ Gateway のツール:
 - <https://www.yamamanx.com/profile/>
 - <https://www.yamamanx.com/copilot-8-teams-post/>
 
-作成中に全体アーキテクチャを説明します。状態が `READY` になったら、ハーネスの **ARN** をコピーします。
+作成中に全体アーキテクチャを説明します。状態が `READY` になったら、ハーネスの **ID** を控えます (ARN の `harness/` の後ろの部分です)。
 
 > このデモのアプリは IAM (SigV4) で呼び出します。ハーネスの認証方式は IAM のままにしてください。
 
-### 2. ARN を反映してデプロイ
+### 2. ハーネス ID を反映してデプロイ
 
-`helm/chat-app/values.yaml` の `harness.arn` に貼り付けて、コミット、プッシュします。
+`helm/chat-app/values.yaml` の `harness.id` に貼り付けて、コミット、プッシュします。
 
 ```yaml
 harness:
-  arn: "arn:aws:bedrock-agentcore:us-east-1:<ACCOUNT_ID>:harness/<HARNESS_ID>"
+  id: "<HARNESS_ID>"   # 例: MatsusakaGuide-xxxxxxxxxx
 ```
 
 パイプラインの流れ:
@@ -112,6 +112,9 @@ harness:
 2. Build: CodeBuild がコンテナイメージをビルドし、ECR へ push (タグはコミット ID の先頭 12 文字)
 3. Deploy: CodePipeline の「Amazon EKS」アクション (Helm) が、`helm/chat-app` を `chat-app` リリースとしてデプロイ。
    イメージ URI は `helm/pipeline-values.yaml` の `$IMAGE_REPOSITORY` と `$IMAGE_TAG` が環境変数で置換されて渡ります。
+   同じ仕組みで AWS アカウント ID (`$AWS_ACCOUNT_ID`) も渡され、チャートが
+   `arn:aws:bedrock-agentcore:<リージョン>:<アカウント ID>:harness/<harness.id>` を組み立てます。
+   そのため、アカウント ID は公開リポジトリに残りません。
 
 ### 3. 動作確認
 
@@ -121,8 +124,8 @@ kubectl get ingress -n demo      # ALB の DNS 名を確認
 
 ブラウザで ALB の DNS 名 (`http://...`) を開き、チャット画面から質問します。
 
-`harness.arn` が未設定のままだと、画面上部に赤いエラー (「ハーネス ARN が設定されていません。…」) が表示され、
-入力欄と送信ボタンは無効になります。ARN を設定して再デプロイすると解消します。
+`harness.id` が未設定のままだと、画面上部に赤いエラー (「ハーネス ARN が設定されていません。…」) が表示され、
+入力欄と送信ボタンは無効になります。ID を設定して再デプロイすると解消します。
 
 質問例:
 

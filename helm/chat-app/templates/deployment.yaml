@@ -15,7 +15,7 @@ spec:
         {{- include "chat-app.selectorLabels" . | nindent 8 }}
       annotations:
         # ハーネス ARN を変更したら Pod を再作成する
-        checksum/harness: {{ printf "%s%s" .Values.harness.arn .Values.harness.qualifier | sha256sum }}
+        checksum/harness: {{ printf "%s%s%s%s" .Values.harness.id .Values.harness.qualifier .Values.aws.region .Values.aws.accountId | sha256sum }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       containers:
@@ -27,7 +27,11 @@ spec:
               containerPort: 8080
           env:
             - name: HARNESS_ARN
-              value: {{ .Values.harness.arn | quote }}
+              {{- if .Values.harness.id }}
+              value: {{ printf "arn:aws:bedrock-agentcore:%s:%s:harness/%s" .Values.aws.region (required "aws.accountId is required when harness.id is set" .Values.aws.accountId) .Values.harness.id | quote }}
+              {{- else }}
+              value: ""
+              {{- end }}
             - name: QUALIFIER
               value: {{ .Values.harness.qualifier | quote }}
             - name: AWS_REGION
