@@ -7,7 +7,7 @@
 harness:
   # ハーネスの ID。ARN の末尾 "harness/" の後ろの部分 (エンドポイントは含めない)
   # 例: arn:aws:bedrock-agentcore:us-east-1:111122223333:harness/MyHarness-XXXXXXXXXX -> MyHarness-XXXXXXXXXX
-  id: ""
+  id: "MatsusakaGuide-rW96KJIhxR"
   # エンドポイント名 (省略すると DEFAULT)
   qualifier: ""
 
